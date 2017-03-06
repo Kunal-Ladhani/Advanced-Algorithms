@@ -1,0 +1,205 @@
+/* Rishabh Arora
+   IIIT-Hyderabad */
+
+#include <bits/stdc++.h>
+using namespace std;
+
+typedef pair<long long int, long long int> II;
+typedef vector<int> VI;
+typedef vector<II> VII;
+typedef long long int LL;
+typedef unsigned long long int ULL;
+
+#define rep(i, a, b) for(i = a; i < b; i++)
+#define rev(i, a, b) for(i = a; i > b; i--)
+#define INF INT_MAX
+#define PB push_back
+#define MP make_pair
+#define F first
+#define S second
+#define SET(a,b) memset(a, b, sizeof(a))
+
+//debugging statements
+#define TRACE
+#ifdef TRACE
+#define trace(...) __f(#__VA_ARGS__, __VA_ARGS__)
+template <typename Arg1>
+void __f(const char* name, Arg1&& arg1){
+	cerr << name << " : " << arg1 << std::endl;
+}
+template <typename Arg1, typename... Args>
+void __f(const char* names, Arg1&& arg1, Args&&... args){
+	const char* comma = strchr(names + 1, ',');cerr.write(names, comma - names) << " : " << arg1<<" | ";__f(comma+1, args...);
+}
+#else
+#define trace(...)
+#endif
+
+const int N = 1e5+10;
+const int mod = 1e9+7;
+
+struct node {
+	LL u, i, w;
+};
+
+LL start, ans[N], dp1[N], dp2[N], dp1v[N], dp2v[N], timer, low[N], in[N], par[N], btree[N];
+vector<vector<node> > g;
+vector<VII> tree;
+vector<queue<LL > > Q;
+LL i;
+bool vis[N], isbridge[2*N];
+//marking the bridges in a graph 
+void dfs0(int v) {
+	vis[v] = true;
+	in[v] = low[v] = timer++;
+	for(auto U : g[v]) {
+		LL i = U.i, u = U.u;
+		if(!vis[u]) {
+			par[u] = v;
+			dfs0(u);
+			low[v] = min(low[u], low[v]);
+			if(low[u] > in[v]) {
+				isbridge[i] = true;
+			}
+		}
+		else if(u != par[v]) {
+			low[v] = min(low[v], in[u]);
+		}
+	}
+	return;
+}
+
+//the real work
+void dfs1(int v) {
+	start = v;
+	Q[v].push(v);
+	vis[v] = true;
+	btree[v] = v;
+	while(!Q[v].empty()) {
+		int u = Q[v].front();
+		Q[v].pop();
+		for(auto x : g[u]) {
+			if(isbridge[x.i] && !vis[x.u]) {
+				tree[v].PB({x.u, x.w});
+				tree[x.u].PB({v, x.w});
+				//trace(v, x.u);
+				dfs1(x.u);
+			}
+			else if(!vis[x.u]) {
+				Q[v].push(x.u);
+				vis[x.u] = true;
+				btree[x.u] = v;
+			}
+		}
+	}
+	return ;
+}
+
+LL dfs2(int v) {
+	dp1[v] = dp2[v] = 0;
+	vis[v] = true;
+	for(auto U : tree[v]) {
+		LL u = U.F;
+		LL w = U.S;
+		if(!vis[u]) {
+			LL a = w + dfs2(u);
+			if(a >= dp1[v]) {
+				dp2v[v] = dp1v[v];
+				dp2[v] = dp1[v];
+				dp1[v] = a;
+				dp1v[v] = u;
+			}
+			else if(a > dp2[v]) {
+				dp2[v] = a;
+				dp2v[v] = u;
+			}
+		}
+	}
+	return dp1[v];
+}
+
+void dfs3(LL v, LL Max) {
+	vis[v] = true;
+	ans[v] = max(dp1[v], Max);
+	for(auto U : tree[v]) {
+		LL u = U.F;
+		LL w = U.S;
+		if(!vis[u]) {
+			if(u == dp1v[v]) {
+				dfs3(u, w + max(dp2[v], Max));
+			}
+			else {
+				dfs3(u, w + max(dp1[v], Max));
+			}
+		}
+	}
+	return ;
+}
+int main() {
+
+  ios::sync_with_stdio(false);	
+  cin.tie(NULL);
+  LL T, a, b;
+  cin >> T;
+  while(T--) {
+  	timer = 0;
+  	SET(par, -1);
+  	SET(btree, -1);
+  	LL n, m, w;
+  	cin >> n >> m;
+  	g.resize(n+2);
+  	tree.resize(n+2);
+  	Q.resize(n+2);
+  	rep(i, 1, m+1) {
+  		cin >> a >> b >> w;
+  		g[a].PB((node){b, i, w});
+  		g[b].PB((node){a, i, w});
+  	}
+
+  	rep(i,1, m+1) {
+  		isbridge[i] = false;
+  	}
+
+  	rep(i, 1, n+1) {
+  		vis[i] = false;
+  	}
+  	dfs0(1);
+  	
+  	rep(i, 1, n+1) {
+  		vis[i] = false;
+  	}
+
+  	dfs1(1);
+
+  	rep(i, 1, n+1) {
+  		vis[i] = false;
+  	}
+  	dfs2(1); 
+
+  	rep(i, 1, n+1) {
+  		vis[i] = false;
+  	}
+  	dfs3(1, 0);
+  	
+  	// rep(i, 1, n+1) {
+  	// 	trace(i, ans[i]);
+  	// }
+  	LL Min = LLONG_MAX;
+  	LL ind = -1;
+
+  	rep(i, 1, n+1) {
+  		if(ans[btree[i]] < Min) {
+  			Min = ans[btree[i]];
+  			ind = i;
+  		}
+  	}
+
+  	cout << ind << ' ' << ans[btree[ind]] << endl;
+
+  	for(auto &x : g)
+  		x.clear();  	
+	for(auto &x : tree)
+  		x.clear();
+  }
+  return 0;
+}
